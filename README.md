@@ -13,4 +13,4 @@ This is a plugin for [Obsidian](https://obsidian.md) that helps you when you dro
 ### Settings
 
 In the settings it is possible to define what attachments to react to, by default these are `.msg` and `.eml`.
-It is also possible to turn of the functionality for adding a display text for the attachment.
+It is also possible to turn off the functionality for adding a display text for the attachment.
