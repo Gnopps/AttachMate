@@ -1,8 +1,8 @@
-## Obsidian Rewarder
+## AttachMate for Obsidian
 
 ### Intro
 
-This is a plugin that helps you when you drop attachments that Obsidian can't display natively (e.g. email messages dragged from Outlook). It offers two features:
+This is a plugin for [Obsidian](https://obsidian.md) that helps you when you drop attachments that Obsidian can't display natively (e.g. email messages dragged from Outlook). It offers two features:
 
 1. **Remove preview of attachment from note**. This is done by removing the exclamation mark before the attachment, so it will be `[[attachment.msg]]` instead of `![[attachment.msg]]`
 
