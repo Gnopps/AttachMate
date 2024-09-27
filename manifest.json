@@ -5,7 +5,6 @@
 	"minAppVersion": "0.15.0",
 	"description": "Better handling of non-supported attachments",
 	"author": "Gustav Gnosspelius",
-	"authorUrl": "https://github.com/Gnopps/AttachMate",
 	"fundingUrl": "https://ko-fi.com/gnopps",
 	"isDesktopOnly": true
 }
