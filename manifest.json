@@ -3,8 +3,8 @@
 	"name": "Attachmate",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Helps you attach files to your Obsidian notes",
-	"author": "Obsidian",
+	"description": "Better handling of non-supported attachments",
+	"author": "Gustav Gnosspelius",
 	"authorUrl": "https://github.com/Gnopps/AttachMate",
 	"fundingUrl": "https://ko-fi.com/gnopps",
 	"isDesktopOnly": true
