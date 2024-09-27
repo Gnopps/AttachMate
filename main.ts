@@ -17,23 +17,24 @@ export default class AttachMate extends Plugin {
 		await this.loadSettings();
 
 		this.addSettingTab(new settingTab(this.app, this));
+		this.app.workspace.on("editor-drop", (evt, editor, data) => {
+			const cursorPosition = editor.getCursor();
 
-		this.registerEvent(
-			this.app.workspace.on("editor-drop", (evt, editor, data) => {
-				const cursorPosition = editor.getCursor();
+			// Extract the file name from the drop event
+			let fileName = null;
+			if (
+				evt.dataTransfer &&
+				evt.dataTransfer.files &&
+				evt.dataTransfer.files.length > 0
+			) {
+				fileName = evt.dataTransfer.files[0].name;
+			}
 
-				// Extract the file name from the drop event
-				let fileName = null;
-				if (
-					evt.dataTransfer &&
-					evt.dataTransfer.files &&
-					evt.dataTransfer.files.length > 0
-				) {
-					fileName = evt.dataTransfer.files[0].name;
-				}
-
-				// Check if the file name ends with ending we should take action on
-				let foundRightEnding = false;
+			// Check if the file name ends with the correct ending
+			let foundRightEnding = false;
+			if (this.settings.fileExtensions == "*") {
+				foundRightEnding = true;
+			} else {
 				const endingsInSettings =
 					this.settings.fileExtensions.split(",");
 				for (let i = 0; i < endingsInSettings.length; i++) {
@@ -42,106 +43,111 @@ export default class AttachMate extends Plugin {
 						break;
 					}
 				}
-				if (foundRightEnding == false) {
-					return;
-				}
+			}
+			if (!foundRightEnding) {
+				return;
+			}
 
-				// Get the element that represents the editor content
-				const editorElement = editor.containerEl;
+			// Get the element that represents the editor content
+			const editorElement = editor.containerEl;
 
-				// Create a MutationObserver to watch for changes in the editor
-				const observer = new MutationObserver((mutations) => {
-					for (let mutation of mutations) {
+			// Create a MutationObserver to watch for changes in the editor
+			const observer = new MutationObserver((mutations) => {
+				for (let mutation of mutations) {
+					if (
+						mutation.type === "childList" ||
+						mutation.type === "characterData"
+					) {
+						// The drop has completed, execute code
+						const lineText = editor.getLine(cursorPosition.line);
+
+						// Split the line text into before and after the cursor position
+						const beforeCursor = lineText.substring(
+							0,
+							cursorPosition.ch
+						);
+						const afterCursor = lineText.substring(
+							cursorPosition.ch
+						);
+
+						// Perform the replacement only on the part after the cursor
+						const modifiedAfterCursor = afterCursor.replace(
+							"![[",
+							"[["
+						);
+
+						// Combine the parts to form the modified line text
+						const modifiedLineText =
+							beforeCursor + modifiedAfterCursor;
+
+						editor.setLine(cursorPosition.line, modifiedLineText);
+
+						// Recalculate the line text and find the position of the newly created link
+						const updatedLineText = editor.getLine(
+							cursorPosition.line
+						);
+						const positionOfNewLink = updatedLineText.indexOf(
+							"[[",
+							cursorPosition.ch
+						);
+
+						const positionOfClosingBrackets =
+							updatedLineText.indexOf("]]", positionOfNewLink);
+
+						editor.focus();
 						if (
-							mutation.type === "childList" ||
-							mutation.type === "characterData"
+							positionOfNewLink !== -1 &&
+							positionOfClosingBrackets !== -1
 						) {
-							// The drop has completed, execute your code
-							const lineText = editor.getLine(
-								cursorPosition.line
+							// Set the cursor to the position of the "]]" of the newly created link
+							editor.setCursor({
+								line: cursorPosition.line,
+								ch: positionOfClosingBrackets,
+							});
+							editor.replaceRange(
+								"|attachment",
+								editor.getCursor()
 							);
 
-							// Split the line text into before and after the cursor position
-							const beforeCursor = lineText.substring(
-								0,
-								cursorPosition.ch
-							);
-							const afterCursor = lineText.substring(
-								cursorPosition.ch
-							);
+							// Set cursor within the newly added link
+							setTimeout(() => {
+								const newLineText = editor.getLine(
+									cursorPosition.line
+								);
+								const positionOfDivider = newLineText.indexOf(
+									"|attachment]]",
+									positionOfNewLink
+								);
 
-							// Perform the replacement only on the part after the cursor
-							const modifiedAfterCursor = afterCursor.replace(
-								"![[",
-								"[["
-							);
+								// Define the start and end positions of the selection
+								const start = {
+									line: cursorPosition.line,
+									ch: positionOfDivider + 1,
+								};
+								const end = {
+									line: cursorPosition.line,
+									ch: positionOfDivider + 11, // +11 to match the word "attachment"
+								};
 
-							// Combine the parts to form the modified line text
-							const modifiedLineText =
-								beforeCursor + modifiedAfterCursor;
-
-							editor.setLine(
-								cursorPosition.line,
-								modifiedLineText
-							);
-
-							// Check if we should move cursor to insert alternative text
-							if (this.settings.insertAltText == true) {
-								// Find the position of "]]" in the modified line text
-								const positionOfClosingBrackets =
-									modifiedLineText.indexOf("]]");
-								editor.focus();
-								if (positionOfClosingBrackets !== -1) {
-									// Set the cursor to the position of "]]"
-									editor.setCursor({
-										line: cursorPosition.line,
-										ch: positionOfClosingBrackets,
-									});
-									editor.replaceRange(
-										"|attachment",
-										editor.getCursor()
-									);
-									setTimeout(() => {
-										const newLineText = editor.getLine(
-											cursorPosition.line
-										);
-
-										const positionOfDivider =
-											newLineText.indexOf(
-												"|attachment]]"
-											);
-
-										// Define the start and end positions of the selection
-										const start = {
-											line: cursorPosition.line,
-											ch: positionOfDivider + 1,
-										};
-										const end = {
-											line: cursorPosition.line,
-											ch: positionOfDivider + 11, //+11 to match the word "attachment"
-										};
-
-										// Set the selection in CodeMirror
-										editor.setSelection(start, end);
-									}, 100);
-								}
-							}
-
-							// Stop observing after the change is detected and handled
-							observer.disconnect();
-							break;
+								// Set the selection in CodeMirror
+								editor.setSelection(start, end);
+							}, 10);
 						}
-					}
-				});
 
-				// Configure the observer to watch for changes in child elements and text content
-				observer.observe(editorElement, {
-					childList: true,
-					characterData: true,
-					subtree: true,
-				});
-			})
-		);
+						// Stop observing after the change is detected and handled
+						observer.disconnect();
+						break;
+					}
+				}
+			});
+
+			// Configure the observer to watch for changes in child elements and text content
+			observer.observe(editorElement, {
+				childList: true,
+				characterData: true,
+				subtree: true,
+			});
+		});
 	}
 
 	onunload() {}
@@ -174,7 +180,9 @@ class settingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("File endings to react to")
-			.setDesc("Enter the file endings to react to, separated by commas")
+			.setDesc(
+				"Enter the file endings to react to, separated by commas. Use * to react to all files."
+			)
 			.addText((text) =>
 				text
 					.setPlaceholder("msg,eml")
